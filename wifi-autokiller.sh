@@ -115,7 +115,10 @@ cleanvars ()
 ##### MAIN #####
 
 # Very first, make sure we are running as root
-[[ $(whoami) = 'root' ]] || printf 'This needs to run as the root user\n'
+if [[ ! $(whoami) = 'root' ]]; then
+    printf 'This needs to run as the root user\n'
+    exit 1
+fi
 
 # if the user hits ^c, we need to remove our temp CSV files and kill the aireplay-ng processes.
 trap cleanup INT
