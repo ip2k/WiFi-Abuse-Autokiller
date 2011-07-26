@@ -66,7 +66,7 @@ csvpattern='airodump-temp'
 ##### FUNCTIONS #####
 cleanup ()
 {
-    printf 'Caught SIGINT, cleaning up...\n'
+    printf 'Quitting soon, cleaning up first...\n'
 
     if [[ $(pidof aireplay-ng) ]]; then
         printf 'Found at least one aireplay-ng running, sending SIGKILL...\n'
@@ -93,7 +93,7 @@ cleanup ()
     printf 'Cleaning up variables...\n'
     cleanvars
     printf 'Done cleaning up.  Thank you, come again!\n'
-    exit 2
+    exit
 }
 
 cleanvars ()
@@ -158,10 +158,10 @@ printf 'Listing MACs that are about to get a stack of deauth frames in 3 seconds
 # ...line is just column headers), then see if the 5th column (packet count) is ...
 # ...greater than [$packetthresh].  If it is, print the number of packets and ...
 # ...the MAC from the CSV file.  Exclude our MAC to avoid seppuku.
-awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print "Packets:"$5,"--- MAC:",$1}' "${csvfile}" |grep -v "${wlanmac}"
+awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print "Packets:"$5,"--- MAC:",$1}' "${csvfile}" |grep -vi "${wlanmac}"
 sleep 3
 
-stations=$(awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print $1}' "${csvfile}"| grep -v "${wlanmac}")
+stations=$(awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print $1}' "${csvfile}"| grep -vi "${wlanmac}")
 
 # print the stations list so we can make sure that it's the same as above
 # TODO: improve this so we only have *ONE* awk expression since having two makes this way harder to maintain
@@ -190,8 +190,7 @@ for x in $(pidof aireplay-ng); do
 done
 printf "$0 Done\n"
 
-cleanvars
-
+cleanup
 # quit and return a valid exit status
 exit 0
 
