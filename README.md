@@ -9,9 +9,34 @@ First, we need to identify who is abusing their free internet access.  To do tha
 
 Next, we need to parse our CSV and grab the MAC of clients who are being stupid.  We'll set the "stupidity" threshold based on packet count over a defined period (I picked 5 seconds, you might need to play with this a bit).  I picked 50 packets over a 5 second period as my threshold (again, YMMV -- is easy to change).  We use some fun AWK to get this info, then launch [Aireplay-ng][7] to [inject][8] our deauth frames, and we'll also go ahead and spoof the MAC of the base station, because connected clients tend to ignore deauth frames not coming from there.
 
-For added fun, you can run this on a cycle every few minutes:
+Requirements
+------------
+Aircrack-ng
+
+
+Usage
+-----
+Clone the repo and change into directory:
 ```bash
-while true; do sudo wifi-autokiller.sh; sleep $(($RANDOM / 50)); done
+$ git clone -b refactoring git@github.com:heyalexej/wifi-abuse-autokiller.git
+$ cd wifi-abuse-autokiller
+```
+
+Run an iwlist scan for your wlan interface (wlan0 in most cases):
+```bash
+$ iwlist wlan0 scan
+```
+
+From the output, find the ESSID you are connected to. Edit the lines for the MAC address and the channel in the script. Save it.
+
+Run it like so:
+```bash
+$ sudo ./wifi-autokiller.sh
+```
+
+For added fun, you can run this on a cycle. In this example it generates a random number between 30 and 300 which are seconds to sleep before the script runs again:
+```bash
+$ while true; do sudo ./wifi-autokiller.sh; sleep $(($RANDOM % 300+30)); done
 ```
 
 Most users will eventually just stop being stupid or leave in frustration, which I'll also consider a win for us in this case.

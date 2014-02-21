@@ -47,13 +47,13 @@ waitsecs=5
 # threshold that a station must exceed for us to boot it off the wifi (default: 200)
 packetthresh=200
 # numeric wifi channel
-channel=6
+channel=1
 # What is the BSSID that we're booting people off of?
-bssid='C2:9F:DB:F7:89:93'
+bssid='34:BF:90:3A:F2:78'
 # the monitor interface (might require some tweaking if your normal wifi interface drivers can do injection)
 moninterface='mon0'
 # your normal wifi interface (usually wlan0 for Realtek / Intel or ath0 if using Atheros drivers)
-wlaninterface='wlan1'
+wlaninterface='wlan0'
 
 ##### Advanced config (shouldn't need to mess with this) #####
 # how many deauth frames do you want to send to each MAC?
