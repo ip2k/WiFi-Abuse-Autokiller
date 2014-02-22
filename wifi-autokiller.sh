@@ -47,9 +47,9 @@ waitsecs=5
 # threshold that a station must exceed for us to boot it off the wifi (default: 200)
 packetthresh=200
 # numeric wifi channel
-channel=3
+channel=1
 # What is the BSSID that we're booting people off of?
-bssid='E0:CB:4E:44:25:10'
+bssid='34:BF:90:3A:F2:78'
 # the monitor interface (might require some tweaking if your normal wifi interface drivers can do injection)
 moninterface='mon0'
 # your normal wifi interface (usually wlan0 for Realtek / Intel or ath0 if using Atheros drivers)
@@ -112,6 +112,8 @@ cleanvars ()
     unset i
     unset x
 }
+
+
 ##### MAIN #####
 
 # Very first, make sure we are running as root
